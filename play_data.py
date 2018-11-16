@@ -10,11 +10,13 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from re import sub
 import re
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import r2_score
+from datetime import datetime
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
@@ -153,18 +155,50 @@ df_sea_available_cal.columns = ['date', 'vacant_ratio']
 # In[10]:
 
 
-# draw trends of vacant ratio throughout year 2016
-ax1 = df_sea_available_cal.plot(x='date', y='vacant_ratio', kind='line',
-                                title='vacant ratio of listings throughout yr 2016')
+# define a function to plot trends of vacant rates
+def plotTrendVacantRates(df, cols, legends):
+    d = []
+    for x in df.date.tolist():
+        d.append(datetime.strptime(x, '%Y-%m-%d'))
+        
+    # set figure format
+    days = mdates.DayLocator()
+    months = mdates.MonthLocator()
+    years = mdates.YearLocator()
+    dfmt = mdates.DateFormatter('%b')
 
-plt.show()
+    datemin = d[0]
+    datemax = d[-1]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.xaxis.set_major_locator(months)
+    ax.xaxis.set_major_formatter(dfmt)
+    ax.xaxis.set_minor_locator(days)
+    ax.set_xlim(datemin, datemax)
+    ax.set_ylabel('Vacant rate')
+    ax.set_title("Trend of Vacant Rate")
+    
+    for col in cols:
+        t = df_sea_available_cal[col].tolist()
+        ax.plot(d, t, linewidth=2)
+    
+    ax.legend(legends)
+    fig.set_size_inches(8, 4)
+
+
+# In[11]:
+
+
+# draw trends of vacant ratio throughout year 2016
+plotTrendVacantRates(df_sea_available_cal, ['vacant_ratio'], ['all neighborhoods'])
 
 
 # ### Step 2.4 Analysis
 # 
 # Based on the figure above, we would like to know which dates have a low vacant ratio(<0.6). These days with a low vacant ratio will be considered as most popular for visiting Seattle
 
-# In[11]:
+# In[12]:
 
 
 # print out the dates when the vacant ratio is below 0.6
@@ -181,7 +215,7 @@ df_sea_available_cal.query("vacant_ratio<0.6").date.tolist()
 # 
 # Let's take a look at the vacant ratio throughout a year for those popular neighborhoods in Seattle.
 
-# In[12]:
+# In[13]:
 
 
 # get the time serie data for the most popular neighborhoods
@@ -192,17 +226,15 @@ df_sea_available_popular_cal = df_sea_cal[df_sea_cal.listing_id.isin(neighborhoo
 df_sea_available_cal['vacant_ratio_popular'] = df_sea_available_popular_cal['available']
 
 
-# In[13]:
+# In[14]:
 
 
 # draw trends of vacant ratio(for general and popular neighborhoods) throughout year 2016
-ax1 = df_sea_available_cal.plot(x='date', y=['vacant_ratio', 'vacant_ratio_popular'], kind='line',
-                                title='vacant ratio of listings throughout yr 2016')
-
-plt.show()
+plotTrendVacantRates(df_sea_available_cal, ['vacant_ratio', 'vacant_ratio_popular'],
+                     ['all neighborhoods', 'most popular neighborhoods'])
 
 
-# In[14]:
+# In[15]:
 
 
 # print out the dates when the vacant ratio for popular neighborhood is below 0.51
@@ -229,7 +261,7 @@ df_sea_available_cal.query("vacant_ratio_popular<0.51").date.tolist()
 
 # #### Step 3.1.1 Data Preparation
 
-# In[15]:
+# In[16]:
 
 
 print("Number of missing values in column[price]:", df_sea_list.price.isnull().sum())
@@ -237,7 +269,7 @@ print("Number of missing values in column[neighbourhood_cleansed]:",
       df_sea_list.neighbourhood_cleansed.isnull().sum())
 
 
-# In[16]:
+# In[17]:
 
 
 # convert currency string to float in column[price]
@@ -245,7 +277,7 @@ df_sea_list_price = df_sea_list.copy()
 df_sea_list_price['price'] = df_sea_list_price.price.apply(lambda i: float(sub(r'[^\d.]', '', i)))
 
 
-# In[17]:
+# In[18]:
 
 
 # print out the median price for all airbnb listings
@@ -255,7 +287,7 @@ print("Median price of all listings in Seattle: {}".format(
 
 # #### Step 3.1.2 Data Processing
 
-# In[18]:
+# In[19]:
 
 
 # group df_sea_list_price by neighborhood with a median price for each group calculated
@@ -266,7 +298,7 @@ df_sea_list_price_neighborhood.columns = ['neighbourhood_cleansed', 'median_pric
 
 # #### Step 3.1.3 Data preparation
 
-# In[19]:
+# In[20]:
 
 
 # plot the median prices for top ten most listed neighborhoods
@@ -287,7 +319,7 @@ plt.show()
 
 # #### Step 3.2.1 Data Understanding
 
-# In[20]:
+# In[21]:
 
 
 print("Number of missing values in column property_type:", df_sea_list_price.property_type.isnull().sum())
@@ -298,7 +330,7 @@ print("Number of missing values in column room_type:", df_sea_list_price.room_ty
 
 # #### Step 3.2.2 Data Processing
 
-# In[21]:
+# In[22]:
 
 
 # group df_sea_list_price by property_type and room_type with a median price and count calculated for listings in each group
@@ -326,7 +358,7 @@ df_sea_list_property_price
 
 # #### Step 3.3.1 Data Understanding
 
-# In[22]:
+# In[23]:
 
 
 print("Number of missing values in column bedrooms:", df_sea_list_price.bedrooms.isnull().sum())
@@ -339,7 +371,7 @@ print("Number of missing values in column square_feet: {} out of {}".format(
 
 # #### Step 3.3.2 Data Processing
 
-# In[23]:
+# In[24]:
 
 
 # group df_sea_list_price by columns ['bedrooms', 'bathrooms'] with median price and count calculated in each group
@@ -367,7 +399,7 @@ df_sea_list_size_price
 
 # There is a significant amount of missing values in these features, where there is no review scores attached to the listing. We will replace these NaN values with -1, as a way to indicate NaN values as pandas.groupby will automatically drop NaN.
 
-# In[24]:
+# In[25]:
 
 
 review_features = ["review_scores_accuracy", "review_scores_checkin", "review_scores_cleanliness",
@@ -375,7 +407,7 @@ review_features = ["review_scores_accuracy", "review_scores_checkin", "review_sc
                   "review_scores_value"]
 
 
-# In[25]:
+# In[26]:
 
 
 for feature in review_features:
@@ -383,7 +415,7 @@ for feature in review_features:
     feature, df_sea_list_price[feature].isnull().sum(), len(df_sea_list_price)))
 
 
-# In[26]:
+# In[27]:
 
 
 review_na_replace_dict = {k: -1 for k in review_features}
@@ -392,7 +424,7 @@ df_sea_list_review_price = df_sea_list_price.fillna(review_na_replace_dict)
 
 # #### Step 3.4.2 Data Processing and Visualization
 
-# In[27]:
+# In[28]:
 
 
 def display_review_groups(df_review):
@@ -420,7 +452,7 @@ def display_review_groups(df_review):
         plt.show()
 
 
-# In[28]:
+# In[29]:
 
 
 display_review_groups(df_sea_list_review_price)
@@ -434,7 +466,7 @@ display_review_groups(df_sea_list_review_price)
 # 
 # Look at things from a difference angle. Group the data by "number of reviews" and explore if it's related with pricing.
 
-# In[29]:
+# In[30]:
 
 
 def partition_by_number_of_reviews(df, idx, interval=50):
@@ -442,7 +474,7 @@ def partition_by_number_of_reviews(df, idx, interval=50):
     return int(df[col].loc[idx]/interval)*interval+interval/2
 
 
-# In[30]:
+# In[31]:
 
 
 def display_grouping_by_number_of_reviews(df_review, interval=50):
@@ -475,7 +507,7 @@ def display_grouping_by_number_of_reviews(df_review, interval=50):
     plt.show()
 
 
-# In[31]:
+# In[32]:
 
 
 display_grouping_by_number_of_reviews(df_sea_list_review_price, 10)
@@ -484,16 +516,18 @@ display_grouping_by_number_of_reviews(df_sea_list_review_price, 10)
 # Surprisingly, the general trend is that the more reviews a listing has, the less the median price is. This could make sense since customers are more likely to post a review on an AirBnB/hotle stay if they have a negative experience of it. More reviews a listing has, more negative impressions it might present to the public, thus lower it is priced later.
 
 # ### Step 3.5 Random Forest
+# 
+# There are around 3,800 number of data points and we might easily get **overfitting** problems with linear regression. Choose **Random Forest Classifier** instead and it performs well with limited training data.
 
 # #### Step 3.5.1 Data Preparation
 
-# In[32]:
+# In[33]:
 
 
 print("Number of missing values in column price:", df_sea_list.price.isnull().sum())
 
 
-# In[33]:
+# In[34]:
 
 
 # Split into explanatory and response variables
@@ -505,7 +539,7 @@ X = df_sea_list.drop('price', axis=1)
 # 
 # There are some features ought to be converted into numbers from string. And before that, we need to strip the dollar signs and percentage signs from these strings.
 
-# In[34]:
+# In[35]:
 
 
 # convert numeric strings to number type
@@ -523,7 +557,7 @@ X[features_to_converted_to_number].head()
 # 
 # Some features contains string that we could parse into phrases and obtain some useful information out of them. For example, in "amenities" we could get whether a TV or wireless internet is provided by the host. They could have a impact on pricing as well.
 
-# In[35]:
+# In[36]:
 
 
 # parse keywords in features in features_to_parse
@@ -533,7 +567,7 @@ def getPhrases(text):
     return re.compile('\w[\w\s\/\(\)\-\_]*').findall(text.lower())
 
 
-# In[36]:
+# In[37]:
 
 
 # example of phrases parsed from host_verifications
@@ -541,7 +575,7 @@ set.union(*X['host_verifications'].apply(
     lambda x: set(getPhrases(x)) if x is not np.nan else x).tolist())
 
 
-# In[37]:
+# In[38]:
 
 
 # function to parse phrases in selected features
@@ -567,7 +601,7 @@ def parseFeaturesByPhrases(df, feature_list):
     return df.drop(feature_list, axis=1, inplace=True)
 
 
-# In[38]:
+# In[39]:
 
 
 # perform parsing
@@ -579,7 +613,7 @@ X.head()
 # 
 # Some features are redundant in predicting price. For example, weekly_price and monthly_price are already good indicators of price. For another example, listing id is directly related to the price of exising data, use it in the model will result in overfitting.
 
-# In[39]:
+# In[40]:
 
 
 # drop columns that are subjective desriptions, or redundant informations
@@ -604,7 +638,7 @@ X.head()
 # 
 # Perform one-hot-encoding on categorical features. Before that, drop features with more than half of their values missing.
 
-# In[40]:
+# In[41]:
 
 
 # perform one-hot-encoding
@@ -618,7 +652,7 @@ X.head()
 # 
 # Impute missing values by average values in each column.
 
-# In[41]:
+# In[42]:
 
 
 # drop columns with more than half of its value missing
@@ -626,7 +660,7 @@ X_imputed = X.dropna(axis=1, thresh=int(0.5*len(X)))
 X_imputed.head()
 
 
-# In[42]:
+# In[43]:
 
 
 # perform imputation
@@ -639,14 +673,14 @@ X_imputed.head()
 # 
 # Run a Random Forest model on dataset and print out the top ten most important features in predicting price.
 
-# In[43]:
+# In[44]:
 
 
 # split testing and training sets
 X_train, X_test, y_train, y_test = train_test_split(X_imputed, y, test_size=0.3, random_state=42)
 
 
-# In[44]:
+# In[45]:
 
 
 # train a random forest model with y_train and X_train
@@ -665,7 +699,7 @@ train_score = r2_score(y_train, y_train_preds)
 print("test_score: {}, train_score: {}".format(test_score, train_score))
 
 
-# In[45]:
+# In[46]:
 
 
 def importance_weights(coefficients, X_train):
@@ -693,6 +727,20 @@ importance_df = importance_weights(clf.feature_importances_, X_train)
 importance_df.head(TopK)
 
 
+# In[47]:
+
+
+# draw a bar charts for most important features
+top_importance_df = importance_df.head(TopK)
+
+fig = plt.figure() # Create matplotlib figure
+
+ax = fig.add_subplot(111) # Create matplotlib axes
+top_importance_df.plot(x='feature', y='importance', legend=False, width=0.3, figsize=(9,6),                         
+                       kind='bar', ax=ax, title="Top {} Most Important Features".format(TopK))
+ax.set_ylabel("Importance Score")
+
+
 # #### Step 3.5.3 Analysis
 
 # Based on the chart above, the top ten most importent features in determining price of a airbnb listing is:
@@ -707,7 +755,7 @@ importance_df.head(TopK)
 # * bathrooms
 # * room_type_Shared room
 # 
-# Among these features, "accommodates", "beds", "bathrooms" and "bedrooms" are directly related with the size of a listing, which is further direclty related with pricing. "room_type_Private room" and "room_type_Shared room" represent the quality of the stay. "longitude" and "latitude" are about the locations of a listing, the impact of which on pricing we explored in a previous section. "cleaning_fee" is also correlated with pricing as well as the higher the cleaning fee is the pricier a listing is.
+# Among these features, "accommodates", "beds", "bathrooms" and "bedrooms" are directly related with the size of a listing, which is further direclty related with pricing. "room_type_Private room" and "room_type_Shared room" represent the quality of the stay. "longitude" and "latitude" are about the locations of a listing, the impact of which on pricing we explored in a previous section. "cleaning_fee" is also correlated with pricing as well since the higher the cleaning fee is the pricier a listing is.
 # 
 # In a previous secitn, we explored "number_of_reviews" and found it is somehow negtively correlated with price. We would expect similar result from "reviews_per_month". The negative correlation might make sense with the consideration that customers are more likely to write a review on a AirBnB stay if they have a negative experience of it.
 
